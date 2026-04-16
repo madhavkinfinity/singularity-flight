@@ -2,84 +2,52 @@ using UnityEngine;
 
 /// <summary>
 /// GameManager
-/// Purpose: Central game-state coordinator for play, crash, and restart flows.
+/// Purpose: Manages the high-level game flow and state transitions.
 /// Responsibilities:
-/// - Own high-level run state.
-/// - Coordinate startup and restart sequencing.
+/// - Expose a singleton instance.
+/// - Track current game state.
+/// - Start and crash the game.
 /// </summary>
 public sealed class GameManager : MonoBehaviour
 {
-    private enum GameState
+    public enum GameState
     {
         Playing,
         Crashed
     }
 
-    [Header("System References")]
-    [SerializeField] private DroneController droneController;
-    [SerializeField] private DistanceTracker distanceTracker;
-    [SerializeField] private HUDController hudController;
+    public static GameManager Instance { get; private set; }
 
-    [Header("Timing")]
-    [SerializeField, Min(0.1f)] private float restartDelaySeconds = 1f;
+    public GameState CurrentState { get; private set; } = GameState.Playing;
 
-    private GameState currentState = GameState.Playing;
-    private float restartAtTime;
-
-    public bool IsPlaying => currentState == GameState.Playing;
-
-    private void Start()
+    private void Awake()
     {
-        StartRun();
+        if (Instance != null && Instance != this)
+        {
+            Debug.LogWarning("[GameManager] Duplicate instance detected. Destroying this instance.");
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
+        Debug.Log("[GameManager] Singleton initialized.");
     }
 
-    private void Update()
+    public void StartGame()
     {
-        if (currentState == GameState.Crashed && Time.time >= restartAtTime)
-        {
-            StartRun();
-        }
+        CurrentState = GameState.Playing;
+        Debug.Log("[GameManager] Game started. State = Playing.");
     }
 
     public void CrashGame()
     {
-        if (currentState == GameState.Crashed)
+        if (CurrentState == GameState.Crashed)
         {
+            Debug.Log("[GameManager] CrashGame called, but game is already crashed.");
             return;
         }
 
-        currentState = GameState.Crashed;
-        restartAtTime = Time.time + restartDelaySeconds;
-
-        if (droneController != null)
-        {
-            droneController.SetMovementEnabled(false);
-        }
-
-        if (hudController != null)
-        {
-            hudController.ShowDeathOverlay(distanceTracker != null ? distanceTracker.CurrentDistanceMeters : 0f);
-        }
-    }
-
-    private void StartRun()
-    {
-        currentState = GameState.Playing;
-
-        if (distanceTracker != null)
-        {
-            distanceTracker.ResetDistance();
-        }
-
-        if (droneController != null)
-        {
-            droneController.ResetTransform();
-            droneController.SetMovementEnabled(true);
-        }
-
-        if (hudController != null)
-        {
-            hudController.HideDeathOverlay();
-        }
+        CurrentState = GameState.Crashed;
+        Debug.Log("[GameManager] Game crashed. State = Crashed.");
     }
 }
