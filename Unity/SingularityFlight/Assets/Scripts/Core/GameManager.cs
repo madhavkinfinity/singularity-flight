@@ -19,6 +19,7 @@ public sealed class GameManager : MonoBehaviour
     public static GameManager Instance { get; private set; }
 
     public GameState CurrentState { get; private set; } = GameState.Playing;
+    public bool IsPlaying => CurrentState == GameState.Playing;
 
     private void Awake()
     {
