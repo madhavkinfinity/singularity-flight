@@ -2,34 +2,120 @@ using UnityEngine;
 
 /// <summary>
 /// InputController
-/// Purpose: Capture touch/mouse/keyboard input and expose normalized steering.
+/// Purpose: Capture drag input from touch and mouse, then provide smoothed normalized steering.
 /// Responsibilities:
-/// - Read user input sources.
-/// - Output normalized Vector2 steering in range [-1, 1].
+/// - Read touch and mouse drag deltas.
+/// - Normalize steering output to range [-1, 1].
+/// - Smooth steering to improve control feel.
 /// </summary>
 public sealed class InputController : MonoBehaviour
 {
-    private const string HorizontalAxis = "Horizontal";
-    private const string VerticalAxis = "Vertical";
+    [Header("Input")]
+    [SerializeField, Min(1f)] private float dragNormalizationPixels = 120f;
+    [SerializeField, Range(0.01f, 0.5f)] private float inputSmoothing = 0.1f;
 
-    public Vector2 SteeringInput { get; private set; }
+    private Vector2 pointerPosition;
+    private Vector2 smoothedInput;
+    private bool pointerActive;
+
+    public Vector2 SteeringInput => smoothedInput;
+
+    public Vector2 GetSteeringInput()
+    {
+        return smoothedInput;
+    }
 
     private void Update()
     {
-        SteeringInput = ReadSteeringInput();
+        Vector2 targetInput = ReadDragInput();
+        float interpolation = 1f - Mathf.Exp(-Time.deltaTime / inputSmoothing);
+        smoothedInput = Vector2.Lerp(smoothedInput, targetInput, interpolation);
     }
 
-    private static Vector2 ReadSteeringInput()
+    private Vector2 ReadDragInput()
     {
-        if (Input.touchCount > 0)
+        if (TryGetTouchDrag(out Vector2 touchDrag))
         {
-            Touch touch = Input.GetTouch(0);
-            Vector2 normalized = touch.deltaPosition / Mathf.Max(Screen.width, Screen.height);
-            return Vector2.ClampMagnitude(normalized * 8f, 1f);
+            return NormalizeDrag(touchDrag);
         }
 
-        float horizontal = Input.GetAxisRaw(HorizontalAxis);
-        float vertical = Input.GetAxisRaw(VerticalAxis);
-        return Vector2.ClampMagnitude(new Vector2(horizontal, vertical), 1f);
+        if (TryGetMouseDrag(out Vector2 mouseDrag))
+        {
+            return NormalizeDrag(mouseDrag);
+        }
+
+        return Vector2.zero;
+    }
+
+    private bool TryGetTouchDrag(out Vector2 dragDelta)
+    {
+        dragDelta = Vector2.zero;
+
+        if (Input.touchCount <= 0)
+        {
+            pointerActive = false;
+            return false;
+        }
+
+        Touch touch = Input.GetTouch(0);
+        if (touch.phase == TouchPhase.Began)
+        {
+            pointerPosition = touch.position;
+            pointerActive = true;
+            return false;
+        }
+
+        if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled)
+        {
+            pointerActive = false;
+            return false;
+        }
+
+        if (!pointerActive)
+        {
+            pointerPosition = touch.position;
+            pointerActive = true;
+            return false;
+        }
+
+        dragDelta = touch.position - pointerPosition;
+        pointerPosition = touch.position;
+        return true;
+    }
+
+    private bool TryGetMouseDrag(out Vector2 dragDelta)
+    {
+        dragDelta = Vector2.zero;
+
+        if (Input.GetMouseButtonDown(0))
+        {
+            pointerPosition = Input.mousePosition;
+            pointerActive = true;
+            return false;
+        }
+
+        if (Input.GetMouseButtonUp(0))
+        {
+            pointerActive = false;
+            return false;
+        }
+
+        if (!pointerActive || !Input.GetMouseButton(0))
+        {
+            return false;
+        }
+
+        Vector2 currentPosition = Input.mousePosition;
+        dragDelta = currentPosition - pointerPosition;
+        pointerPosition = currentPosition;
+        return true;
+    }
+
+    private Vector2 NormalizeDrag(Vector2 dragDelta)
+    {
+        Vector2 normalized = dragDelta / dragNormalizationPixels;
+        normalized.x = Mathf.Clamp(normalized.x, -1f, 1f);
+        normalized.y = Mathf.Clamp(normalized.y, -1f, 1f);
+        return normalized;
     }
 }
