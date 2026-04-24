@@ -80,6 +80,7 @@ public sealed class DroneHybridVisual : MonoBehaviour
         if (visualRoot == null)
         {
             visualRoot = CreateChild(RootName, Vector3.zero, Vector3.zero, Vector3.one).transform;
+            visualRoot.SetParent(transform, false);
         }
 
         BuildBody(visualRoot);
