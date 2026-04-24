@@ -23,11 +23,21 @@ public sealed class CameraFollow : MonoBehaviour
 
     private Vector3 followVelocity;
 
+    public void ApplyThirdPersonPreset()
+    {
+        followOffset = new Vector3(0f, 2.2f, -9f);
+        lookAheadDistance = 12f;
+        positionSmoothTime = 0.12f;
+        rotationLerpSpeed = 10f;
+
+        SnapToFollowPose();
+    }
 
     public void SetTarget(Transform followTarget)
     {
         target = followTarget;
         droneController = followTarget != null ? followTarget.GetComponent<DroneController>() : null;
+        SnapToFollowPose();
     }
 
     private void LateUpdate()
@@ -59,5 +69,26 @@ public sealed class CameraFollow : MonoBehaviour
         Quaternion targetRotation = Quaternion.LookRotation(lookDirection.normalized, Vector3.up);
         float rotationStep = rotationLerpSpeed * Time.deltaTime;
         transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationStep);
+    }
+
+    private void SnapToFollowPose()
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        Quaternion frameRotation = droneController != null ? droneController.TravelRotation : target.rotation;
+        transform.position = target.position
+            + (frameRotation * Vector3.right * followOffset.x)
+            + (frameRotation * Vector3.up * followOffset.y)
+            + (frameRotation * Vector3.forward * followOffset.z);
+
+        Vector3 lookDirectionBasis = droneController != null ? droneController.TravelDirection : target.forward;
+        Vector3 lookDirection = (target.position + (lookDirectionBasis * lookAheadDistance)) - transform.position;
+        if (lookDirection.sqrMagnitude > Mathf.Epsilon)
+        {
+            transform.rotation = Quaternion.LookRotation(lookDirection.normalized, Vector3.up);
+        }
     }
 }

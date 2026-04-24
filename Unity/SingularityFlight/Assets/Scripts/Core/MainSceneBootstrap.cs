@@ -64,6 +64,7 @@ public sealed class MainSceneBootstrap : MonoBehaviour
         if (cameraFollow != null)
         {
             cameraFollow.SetTarget(droneController.transform);
+            cameraFollow.ApplyThirdPersonPreset();
         }
 
         TunnelManager tunnelManager = FindAnyObjectByType<TunnelManager>();
@@ -115,10 +116,10 @@ public sealed class MainSceneBootstrap : MonoBehaviour
     private static GameObject CreateSegmentPrefab()
     {
         const float segmentLength = 25f;
-        const float wallDistance = 3f;
+        const float wallDistance = 5f;
         const float wallThickness = 0.5f;
-        const float tunnelHeight = 6f;
-        const float tunnelWidth = 6f;
+        const float tunnelHeight = 10f;
+        const float tunnelWidth = 10f;
 
         GameObject segment = new("RuntimeSegmentPrefab");
         BuildWall("LeftWall", segment.transform, new Vector3(-wallDistance, 0f, 0f), new Vector3(wallThickness, tunnelHeight, segmentLength));
