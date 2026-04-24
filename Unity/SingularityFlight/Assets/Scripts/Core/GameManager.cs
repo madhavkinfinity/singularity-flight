@@ -1,12 +1,14 @@
+using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// GameManager
-/// Purpose: Manages the high-level game flow and state transitions.
+/// Purpose: Manages high-level game flow, crash handling, and run restart timing.
 /// Responsibilities:
 /// - Expose a singleton instance.
-/// - Track current game state.
-/// - Start and crash the game.
+/// - Track game state transitions.
+/// - Trigger crash and restart current run after a short delay.
 /// </summary>
 public sealed class GameManager : MonoBehaviour
 {
@@ -16,10 +18,14 @@ public sealed class GameManager : MonoBehaviour
         Crashed
     }
 
+    private const float RestartDelaySeconds = 1f;
+
     public static GameManager Instance { get; private set; }
 
     public GameState CurrentState { get; private set; } = GameState.Playing;
     public bool IsPlaying => CurrentState == GameState.Playing;
+
+    private Coroutine restartCoroutine;
 
     private void Awake()
     {
@@ -50,5 +56,20 @@ public sealed class GameManager : MonoBehaviour
 
         CurrentState = GameState.Crashed;
         Debug.Log("[GameManager] Game crashed. State = Crashed.");
+
+        if (restartCoroutine != null)
+        {
+            StopCoroutine(restartCoroutine);
+        }
+
+        restartCoroutine = StartCoroutine(RestartAfterDelay());
+    }
+
+    private IEnumerator RestartAfterDelay()
+    {
+        yield return new WaitForSeconds(RestartDelaySeconds);
+
+        Scene activeScene = SceneManager.GetActiveScene();
+        SceneManager.LoadScene(activeScene.buildIndex);
     }
 }
