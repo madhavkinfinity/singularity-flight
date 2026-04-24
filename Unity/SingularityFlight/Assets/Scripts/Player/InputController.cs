@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using InputTouchPhase = UnityEngine.InputSystem.TouchPhase;
 
 /// <summary>
 /// InputController
@@ -75,9 +76,9 @@ public sealed class InputController : MonoBehaviour
             return false;
         }
 
-        TouchPhase phase = touch.phase.ReadValue();
+        InputTouchPhase phase = touch.phase.ReadValue();
         Vector2 touchPosition = touch.position.ReadValue();
-        if (phase == TouchPhase.Began)
+        if (phase == InputTouchPhase.Began)
         {
             pointerPosition = touchPosition;
             pointerActive = true;
@@ -85,7 +86,7 @@ public sealed class InputController : MonoBehaviour
             return false;
         }
 
-        if (phase == TouchPhase.Ended || phase == TouchPhase.Canceled)
+        if (phase == InputTouchPhase.Ended || phase == InputTouchPhase.Canceled)
         {
             pointerActive = false;
             pointerOwnedByTouch = false;
