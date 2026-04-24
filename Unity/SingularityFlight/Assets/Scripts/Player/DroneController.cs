@@ -2,11 +2,11 @@ using UnityEngine;
 
 /// <summary>
 /// DroneController
-/// Purpose: Move the drone forward at a constant speed and apply smoothed steering from InputController.
+/// Purpose: Rotate the drone from steering input while preserving constant forward-speed semantics.
 /// Responsibilities:
-/// - Apply constant forward movement each frame.
 /// - Consume normalized steering input from InputController.
 /// - Limit turning by max turn rate and smooth orientation changes.
+/// - Keep the drone near its spawn position for floating-origin gameplay.
 /// </summary>
 public sealed class DroneController : MonoBehaviour
 {
@@ -26,6 +26,8 @@ public sealed class DroneController : MonoBehaviour
     private Vector3 spawnPosition;
     private Quaternion spawnRotation;
 
+    public float ForwardSpeed => forwardSpeed;
+
     private void Awake()
     {
         spawnPosition = transform.position;
@@ -41,7 +43,7 @@ public sealed class DroneController : MonoBehaviour
 
         UpdateSmoothedInput();
         UpdateRotation();
-        UpdatePosition();
+        KeepNearOrigin();
     }
 
     public void SetMovementEnabled(bool enabled)
@@ -70,13 +72,13 @@ public sealed class DroneController : MonoBehaviour
             return;
         }
 
-        Quaternion targetRotation = Quaternion.LookRotation(steeringDirection.normalized, transform.up);
+        Quaternion targetRotation = Quaternion.LookRotation(steeringDirection.normalized, Vector3.up);
         float maxStep = maxTurnRateDegreesPerSecond * Time.deltaTime;
         transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, maxStep);
     }
 
-    private void UpdatePosition()
+    private void KeepNearOrigin()
     {
-        transform.position += transform.forward * (forwardSpeed * Time.deltaTime);
+        transform.position = spawnPosition;
     }
 }
