@@ -45,6 +45,19 @@ public sealed class ObstacleSystem : MonoBehaviour
         BuildPool();
     }
 
+    public void InitializeForRuntime(DroneController runtimeDroneController, TunnelManager runtimeTunnelManager, Transform runtimeObstacleRoot, CenterPillar runtimeCenterPillarPrefab)
+    {
+        droneController = runtimeDroneController;
+        tunnelManager = runtimeTunnelManager;
+        obstacleRoot = runtimeObstacleRoot;
+        centerPillarPrefab = runtimeCenterPillarPrefab;
+
+        if (pooledPillars.Count == 0)
+        {
+            BuildPool();
+        }
+    }
+
     private void Update()
     {
         if (droneController == null || tunnelManager == null)

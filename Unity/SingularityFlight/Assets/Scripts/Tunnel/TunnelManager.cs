@@ -21,8 +21,8 @@ public sealed class TunnelManager : MonoBehaviour
     [SerializeField, Min(0f)] private float despawnBuffer = 5f;
 
     [Header("Curvature")]
-    [SerializeField, Range(0f, 10f)] private float yawStepDegrees = 4f;
-    [SerializeField, Range(0f, 8f)] private float pitchStepDegrees = 2f;
+    [SerializeField, Range(0f, 10f)] private float yawStepDegrees = 0f;
+    [SerializeField, Range(0f, 8f)] private float pitchStepDegrees = 0f;
     [SerializeField, Min(0.001f)] private float curvatureNoiseFrequency = 0.04f;
     [SerializeField, Range(0.05f, 1f)] private float turnSmoothing = 0.25f;
 
@@ -85,7 +85,7 @@ public sealed class TunnelManager : MonoBehaviour
             return;
         }
 
-        AdvanceTunnelRoot();
+        traveledDistance = droneController.TraveledDistance;
         RecycleSegmentsBehindPlayer();
     }
 
@@ -103,20 +103,6 @@ public sealed class TunnelManager : MonoBehaviour
             activeSegments.Enqueue(new SegmentHandle(segment, nextSpawnDistance));
             nextSpawnDistance += segmentLength;
         }
-    }
-
-    private void AdvanceTunnelRoot()
-    {
-        float stepDistance = droneController.ForwardSpeed * Time.deltaTime;
-        traveledDistance += stepDistance;
-
-        Vector3 forward = droneController.transform.forward;
-        if (droneController.TravelDirection.sqrMagnitude > Mathf.Epsilon)
-        {
-            forward = droneController.TravelDirection;
-        }
-
-        tunnelRoot.position -= forward.normalized * stepDistance;
     }
 
     private void RecycleSegmentsBehindPlayer()
