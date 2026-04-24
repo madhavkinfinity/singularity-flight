@@ -31,7 +31,10 @@ public sealed class DroneController : MonoBehaviour
 
     public float ForwardSpeed => forwardSpeed;
     public float TraveledDistance => traveledDistance;
+    public Quaternion TravelRotation => spawnRotation;
     public Vector3 TravelDirection => spawnRotation * Vector3.forward;
+    public Vector3 TravelRight => spawnRotation * Vector3.right;
+    public Vector3 TravelUp => spawnRotation * Vector3.up;
 
     private void Awake()
     {

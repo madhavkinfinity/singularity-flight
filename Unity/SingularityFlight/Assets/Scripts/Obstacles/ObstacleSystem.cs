@@ -105,11 +105,11 @@ public sealed class ObstacleSystem : MonoBehaviour
 
         CenterPillar pillar = pooledPillars.Dequeue();
 
-        Vector3 forward = droneController.transform.forward.normalized;
+        Vector3 forward = droneController.TravelDirection.normalized;
         Vector3 spawnPosition = droneController.transform.position + (forward * spawnDistanceAhead);
 
         float lateralOffset = seededRandom.NextFloat(-1.5f, 1.5f);
-        spawnPosition += droneController.transform.right * lateralOffset;
+        spawnPosition += droneController.TravelRight * lateralOffset;
 
         pillar.Spawn(spawnPosition, Quaternion.identity, obstacleRoot);
         activePillars.Add(pillar);
@@ -118,7 +118,7 @@ public sealed class ObstacleSystem : MonoBehaviour
     private void DespawnBehindPlayer()
     {
         Vector3 playerPosition = droneController.transform.position;
-        Vector3 playerForward = droneController.transform.forward;
+        Vector3 playerForward = droneController.TravelDirection;
 
         for (int i = activePillars.Count - 1; i >= 0; i--)
         {
