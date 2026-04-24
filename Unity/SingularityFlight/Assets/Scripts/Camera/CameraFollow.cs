@@ -22,6 +22,12 @@ public sealed class CameraFollow : MonoBehaviour
 
     private Vector3 followVelocity;
 
+
+    public void SetTarget(Transform followTarget)
+    {
+        target = followTarget;
+    }
+
     private void LateUpdate()
     {
         if (target == null)

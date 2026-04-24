@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -64,7 +63,22 @@ public sealed class TunnelManager : MonoBehaviour
             tunnelRoot = transform;
         }
 
+        if (nextSpawnDistance <= 0f)
+        {
+            nextSpawnDistance = segmentLength;
+        }
+    }
+
+    private void Start()
+    {
         BuildInitialSegments();
+    }
+
+    public void InitializeForRuntime(Transform runtimeTunnelRoot, DroneController runtimeDroneController, GameObject[] runtimeSegmentPrefabs)
+    {
+        tunnelRoot = runtimeTunnelRoot;
+        droneController = runtimeDroneController;
+        segmentPrefabs = runtimeSegmentPrefabs;
     }
 
     private void Update()
@@ -83,6 +97,11 @@ public sealed class TunnelManager : MonoBehaviour
         for (int i = 0; i < activeSegmentCount; i++)
         {
             Transform segment = CreateSegmentInstance();
+            if (segment == null)
+            {
+                return;
+            }
+
             PlaceSegment(segment, nextSpawnDistance);
             activeSegments.Enqueue(new SegmentHandle(segment, nextSpawnDistance));
             nextSpawnDistance += segmentLength;
@@ -129,7 +148,8 @@ public sealed class TunnelManager : MonoBehaviour
         GameObject prefab = GetRandomPrefab();
         if (prefab == null)
         {
-            throw new InvalidOperationException("[TunnelManager] At least one segment prefab must be assigned.");
+            Debug.LogWarning("[TunnelManager] No segment prefab assigned. Skipping tunnel generation.");
+            return null;
         }
 
         GameObject instance = Instantiate(prefab, tunnelRoot);
