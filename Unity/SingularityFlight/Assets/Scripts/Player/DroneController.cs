@@ -46,6 +46,12 @@ public sealed class DroneController : MonoBehaviour
         KeepNearOrigin();
     }
 
+
+    public void Initialize(InputController controller)
+    {
+        inputController = controller;
+    }
+
     public void SetMovementEnabled(bool enabled)
     {
         movementEnabled = enabled;

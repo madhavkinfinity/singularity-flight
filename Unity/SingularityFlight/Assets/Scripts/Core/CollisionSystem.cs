@@ -20,6 +20,12 @@ public sealed class CollisionSystem : MonoBehaviour
         }
     }
 
+
+    public void Initialize(GameManager manager)
+    {
+        gameManager = manager;
+    }
+
     private void OnTriggerEnter(Collider other)
     {
         TryCrash();
