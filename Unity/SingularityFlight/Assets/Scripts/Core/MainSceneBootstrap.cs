@@ -84,8 +84,8 @@ public sealed class MainSceneBootstrap : MonoBehaviour
             obstacleSystem = obstacleRoot.AddComponent<ObstacleSystem>();
         }
 
-        CenterPillar centerPillarPrefab = CreateCenterPillarPrefab();
-        obstacleSystem.InitializeForRuntime(droneController, tunnelManager, obstacleSystem.transform, centerPillarPrefab);
+        ObstacleBase[] obstaclePrefabs = CreateObstaclePrefabs();
+        obstacleSystem.InitializeForRuntime(droneController, tunnelManager, obstacleSystem.transform, obstaclePrefabs);
     }
 
     private static DroneController CreateDefaultDrone(InputController inputController, GameManager gameManager)
@@ -146,19 +146,38 @@ public sealed class MainSceneBootstrap : MonoBehaviour
         }
     }
 
-    private static CenterPillar CreateCenterPillarPrefab()
+    private static ObstacleBase[] CreateObstaclePrefabs()
     {
-        GameObject pillar = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        pillar.name = "RuntimeCenterPillarPrefab";
+        ObstacleBase[] prefabs =
+        {
+            CreateSolidShapePrefab("RuntimeCubeObstaclePrefab", PrimitiveType.Cube, new Vector3(1.15f, 1.15f, 1.15f), new Color(0.96f, 0.31f, 0.25f)),
+            CreateSolidShapePrefab("RuntimeSphereObstaclePrefab", PrimitiveType.Sphere, new Vector3(1.25f, 1.25f, 1.25f), new Color(0.16f, 0.76f, 0.97f)),
+            CreateSolidShapePrefab("RuntimeCapsuleObstaclePrefab", PrimitiveType.Capsule, new Vector3(0.95f, 1.45f, 0.95f), new Color(1f, 0.72f, 0.2f)),
+            CreateSolidShapePrefab("RuntimeCylinderObstaclePrefab", PrimitiveType.Cylinder, new Vector3(1.05f, 1.1f, 1.05f), new Color(0.4f, 0.91f, 0.54f))
+        };
 
-        Renderer renderer = pillar.GetComponent<Renderer>();
+        return prefabs;
+    }
+
+    private static ObstacleBase CreateSolidShapePrefab(string prefabName, PrimitiveType primitiveType, Vector3 localScale, Color baseColor)
+    {
+        GameObject obstacle = GameObject.CreatePrimitive(primitiveType);
+        obstacle.name = prefabName;
+        obstacle.transform.localScale = localScale;
+
+        Renderer renderer = obstacle.GetComponent<Renderer>();
         if (renderer != null)
         {
-            renderer.material.color = new Color(0.95f, 0.45f, 0.2f);
+            Material material = new(Shader.Find("Universal Render Pipeline/Lit"));
+            material.color = baseColor;
+            material.EnableKeyword("_EMISSION");
+            material.SetColor("_EmissionColor", baseColor * 0.75f);
+            renderer.sharedMaterial = material;
         }
 
-        CenterPillar centerPillar = pillar.AddComponent<CenterPillar>();
-        pillar.SetActive(false);
-        return centerPillar;
+        SolidShapeObstacle shapeObstacle = obstacle.AddComponent<SolidShapeObstacle>();
+        obstacle.SetActive(false);
+        return shapeObstacle;
     }
+
 }
