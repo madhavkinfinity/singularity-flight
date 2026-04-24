@@ -9,6 +9,7 @@ using UnityEngine;
 /// - Keep an active segment window of 20-25 pieces.
 /// - Spawn/reposition segments ahead of the player.
 /// - Despawn/recycle segments behind the player.
+/// - Apply deterministic, noise-based curvature for smooth tunnel turns.
 /// </summary>
 public sealed class TunnelManager : MonoBehaviour
 {
@@ -20,6 +21,12 @@ public sealed class TunnelManager : MonoBehaviour
     [SerializeField, Min(5f)] private float segmentLength = 25f;
     [SerializeField, Min(0f)] private float despawnBuffer = 5f;
 
+    [Header("Curvature")]
+    [SerializeField, Range(0f, 10f)] private float yawStepDegrees = 4f;
+    [SerializeField, Range(0f, 8f)] private float pitchStepDegrees = 2f;
+    [SerializeField, Min(0.001f)] private float curvatureNoiseFrequency = 0.04f;
+    [SerializeField, Range(0.05f, 1f)] private float turnSmoothing = 0.25f;
+
     [Header("References")]
     [SerializeField] private Transform tunnelRoot;
     [SerializeField] private DroneController droneController;
@@ -27,19 +34,30 @@ public sealed class TunnelManager : MonoBehaviour
 
     private readonly Queue<SegmentHandle> activeSegments = new();
 
-    private System.Random seededRandom;
+    private SeedGenerator.DeterministicRandom seededRandom;
     private float traveledDistance;
     private float nextSpawnDistance;
     private int createdSegmentCount;
 
+    private Vector3 nextSpawnLocalPosition;
+    private Quaternion nextSpawnLocalRotation = Quaternion.identity;
+    private float currentYawStep;
+    private float currentPitchStep;
+    private float yawNoiseOffset;
+    private float pitchNoiseOffset;
+
     public int ActiveSegments => activeSegmentCount;
     public float SegmentLength => segmentLength;
-    public int DailySeed => ComputeDailySeed();
+    public int DailySeed => SeedGenerator.GetDailySeedUtc();
+    public float TraveledDistance => traveledDistance;
 
     private void Awake()
     {
         activeSegmentCount = Mathf.Clamp(activeSegmentCount, MinSegmentCount, MaxSegmentCount);
-        seededRandom = new System.Random(DailySeed);
+        seededRandom = SeedGenerator.CreateDeterministicRandom(DailySeed);
+
+        yawNoiseOffset = seededRandom.NextFloat(-1000f, 1000f);
+        pitchNoiseOffset = seededRandom.NextFloat(-1000f, 1000f);
 
         if (tunnelRoot == null)
         {
@@ -128,21 +146,30 @@ public sealed class TunnelManager : MonoBehaviour
             return null;
         }
 
-        int index = seededRandom.Next(0, segmentPrefabs.Length);
+        int index = seededRandom.NextInt(0, segmentPrefabs.Length);
         return segmentPrefabs[index];
     }
 
     private void PlaceSegment(Transform segment, float startDistance)
     {
-        Vector3 localPosition = Vector3.forward * startDistance;
-        segment.SetLocalPositionAndRotation(localPosition, Quaternion.identity);
+        segment.SetLocalPositionAndRotation(nextSpawnLocalPosition, nextSpawnLocalRotation);
+        AdvanceCurvedSpawnPose(startDistance + segmentLength);
     }
 
-    private static int ComputeDailySeed()
+    private void AdvanceCurvedSpawnPose(float distanceSample)
     {
-        DateTime utcDate = DateTime.UtcNow.Date;
-        string seedText = utcDate.ToString("yyyyMMdd");
-        return seedText.GetHashCode();
+        float sample = distanceSample * curvatureNoiseFrequency;
+
+        float targetYawStep = (Mathf.PerlinNoise(yawNoiseOffset, sample) * 2f - 1f) * yawStepDegrees;
+        float targetPitchStep = (Mathf.PerlinNoise(pitchNoiseOffset, sample) * 2f - 1f) * pitchStepDegrees;
+
+        float smoothFactor = 1f - Mathf.Exp(-turnSmoothing);
+        currentYawStep = Mathf.Lerp(currentYawStep, targetYawStep, smoothFactor);
+        currentPitchStep = Mathf.Lerp(currentPitchStep, targetPitchStep, smoothFactor);
+
+        Quaternion incrementalTurn = Quaternion.Euler(currentPitchStep, currentYawStep, 0f);
+        nextSpawnLocalRotation = incrementalTurn * nextSpawnLocalRotation;
+        nextSpawnLocalPosition += nextSpawnLocalRotation * (Vector3.forward * segmentLength);
     }
 
     private readonly struct SegmentHandle
