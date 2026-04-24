@@ -16,7 +16,7 @@ public sealed class CollisionSystem : MonoBehaviour
     {
         if (gameManager == null)
         {
-            gameManager = GameManager.Instance != null ? GameManager.Instance : FindFirstObjectByType<GameManager>();
+            gameManager = GameManager.Instance != null ? GameManager.Instance : FindAnyObjectByType<GameManager>();
         }
     }
 

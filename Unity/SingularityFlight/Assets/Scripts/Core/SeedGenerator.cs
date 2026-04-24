@@ -15,7 +15,8 @@ public static class SeedGenerator
     {
         string dateToken = utcDate.ToString("yyyyMMdd");
         byte[] dateBytes = Encoding.UTF8.GetBytes(dateToken);
-        byte[] hash = SHA256.HashData(dateBytes);
+        using SHA256 sha256 = SHA256.Create();
+        byte[] hash = sha256.ComputeHash(dateBytes);
 
         int rawSeed = BitConverter.ToInt32(hash, 0);
         return rawSeed & int.MaxValue;
