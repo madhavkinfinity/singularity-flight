@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// InputController
@@ -52,7 +53,8 @@ public sealed class InputController : MonoBehaviour
     {
         dragDelta = Vector2.zero;
 
-        if (Input.touchCount <= 0)
+        Touchscreen touchscreen = Touchscreen.current;
+        if (touchscreen == null || touchscreen.touches.Count <= 0)
         {
             if (pointerOwnedByTouch)
             {
@@ -62,16 +64,28 @@ public sealed class InputController : MonoBehaviour
             return false;
         }
 
-        Touch touch = Input.GetTouch(0);
-        if (touch.phase == TouchPhase.Began)
+        UnityEngine.InputSystem.Controls.TouchControl touch = touchscreen.primaryTouch;
+        if (touch == null || !touch.press.isPressed)
         {
-            pointerPosition = touch.position;
+            if (pointerOwnedByTouch)
+            {
+                pointerOwnedByTouch = false;
+                pointerActive = false;
+            }
+            return false;
+        }
+
+        TouchPhase phase = touch.phase.ReadValue();
+        Vector2 touchPosition = touch.position.ReadValue();
+        if (phase == TouchPhase.Began)
+        {
+            pointerPosition = touchPosition;
             pointerActive = true;
             pointerOwnedByTouch = true;
             return false;
         }
 
-        if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled)
+        if (phase == TouchPhase.Ended || phase == TouchPhase.Canceled)
         {
             pointerActive = false;
             pointerOwnedByTouch = false;
@@ -80,30 +94,36 @@ public sealed class InputController : MonoBehaviour
 
         if (!pointerActive)
         {
-            pointerPosition = touch.position;
+            pointerPosition = touchPosition;
             pointerActive = true;
             pointerOwnedByTouch = true;
             return false;
         }
 
-        dragDelta = touch.position - pointerPosition;
-        pointerPosition = touch.position;
+        dragDelta = touchPosition - pointerPosition;
+        pointerPosition = touchPosition;
         return true;
     }
 
     private bool TryGetMouseDrag(out Vector2 dragDelta)
     {
         dragDelta = Vector2.zero;
-
-        if (Input.GetMouseButtonDown(0))
+        Mouse mouse = Mouse.current;
+        if (mouse == null)
         {
-            pointerPosition = Input.mousePosition;
+            return false;
+        }
+
+        bool mousePressed = mouse.leftButton.isPressed;
+        if (mousePressed && !pointerActive && !pointerOwnedByTouch)
+        {
+            pointerPosition = mouse.position.ReadValue();
             pointerActive = true;
             pointerOwnedByTouch = false;
             return false;
         }
 
-        if (Input.GetMouseButtonUp(0))
+        if (!mousePressed)
         {
             if (!pointerOwnedByTouch)
             {
@@ -112,12 +132,12 @@ public sealed class InputController : MonoBehaviour
             return false;
         }
 
-        if (!pointerActive || !Input.GetMouseButton(0))
+        if (!pointerActive)
         {
             return false;
         }
 
-        Vector2 currentPosition = Input.mousePosition;
+        Vector2 currentPosition = mouse.position.ReadValue();
         dragDelta = currentPosition - pointerPosition;
         pointerPosition = currentPosition;
         return true;
@@ -133,8 +153,32 @@ public sealed class InputController : MonoBehaviour
 
     private static Vector2 ReadKeyboardInput()
     {
-        float horizontal = Input.GetAxisRaw("Horizontal");
-        float vertical = Input.GetAxisRaw("Vertical");
+        Keyboard keyboard = Keyboard.current;
+        if (keyboard == null)
+        {
+            return Vector2.zero;
+        }
+
+        float horizontal = 0f;
+        if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed)
+        {
+            horizontal -= 1f;
+        }
+        if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed)
+        {
+            horizontal += 1f;
+        }
+
+        float vertical = 0f;
+        if (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed)
+        {
+            vertical -= 1f;
+        }
+        if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed)
+        {
+            vertical += 1f;
+        }
+
         return new Vector2(horizontal, vertical).normalized;
     }
 }
