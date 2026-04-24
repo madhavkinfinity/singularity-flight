@@ -25,6 +25,8 @@ public sealed class DroneController : MonoBehaviour
     private bool movementEnabled = true;
     private Vector2 lateralOffset;
     private float traveledDistance;
+    private Vector3 previousPosition;
+    private Quaternion previousRotation;
 
     private Vector3 spawnPosition;
     private Quaternion spawnRotation;
@@ -40,6 +42,8 @@ public sealed class DroneController : MonoBehaviour
     {
         spawnPosition = transform.position;
         spawnRotation = transform.rotation;
+        previousPosition = transform.position;
+        previousRotation = transform.rotation;
     }
 
     private void Update()
@@ -50,6 +54,7 @@ public sealed class DroneController : MonoBehaviour
         }
 
         UpdateSmoothedInput();
+        CachePoseBeforeMovement();
         UpdatePosition();
         UpdateRotation();
     }
@@ -71,6 +76,20 @@ public sealed class DroneController : MonoBehaviour
         lateralOffset = Vector2.zero;
         traveledDistance = 0f;
         transform.SetPositionAndRotation(spawnPosition, spawnRotation);
+        previousPosition = transform.position;
+        previousRotation = transform.rotation;
+    }
+
+    public void ConstrainToTunnelBoundary()
+    {
+        lateralOffset = Vector2.ClampMagnitude(lateralOffset, maxLateralOffset);
+        transform.SetPositionAndRotation(previousPosition, previousRotation);
+    }
+
+    private void CachePoseBeforeMovement()
+    {
+        previousPosition = transform.position;
+        previousRotation = transform.rotation;
     }
 
     private void UpdateSmoothedInput()
