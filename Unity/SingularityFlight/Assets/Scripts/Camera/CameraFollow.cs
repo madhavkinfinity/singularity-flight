@@ -11,6 +11,7 @@ using UnityEngine;
 public sealed class CameraFollow : MonoBehaviour
 {
     [SerializeField] private Transform target;
+    private DroneController droneController;
 
     [Header("Follow")]
     [SerializeField] private Vector3 followOffset = new(0f, 1.5f, -7f);
@@ -26,6 +27,7 @@ public sealed class CameraFollow : MonoBehaviour
     public void SetTarget(Transform followTarget)
     {
         target = followTarget;
+        droneController = followTarget != null ? followTarget.GetComponent<DroneController>() : null;
     }
 
     private void LateUpdate()
@@ -35,14 +37,19 @@ public sealed class CameraFollow : MonoBehaviour
             return;
         }
 
-        Vector3 desiredPosition = target.TransformPoint(followOffset);
+        Quaternion frameRotation = droneController != null ? droneController.TravelRotation : target.rotation;
+        Vector3 desiredPosition = target.position
+            + (frameRotation * Vector3.right * followOffset.x)
+            + (frameRotation * Vector3.up * followOffset.y)
+            + (frameRotation * Vector3.forward * followOffset.z);
         transform.position = Vector3.SmoothDamp(
             transform.position,
             desiredPosition,
             ref followVelocity,
             positionSmoothTime);
 
-        Vector3 lookPoint = target.position + (target.forward * lookAheadDistance);
+        Vector3 lookDirectionBasis = droneController != null ? droneController.TravelDirection : target.forward;
+        Vector3 lookPoint = target.position + (lookDirectionBasis * lookAheadDistance);
         Vector3 lookDirection = lookPoint - transform.position;
         if (lookDirection.sqrMagnitude <= Mathf.Epsilon)
         {
