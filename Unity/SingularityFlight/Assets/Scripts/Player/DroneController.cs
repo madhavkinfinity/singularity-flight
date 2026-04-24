@@ -2,10 +2,11 @@ using UnityEngine;
 
 /// <summary>
 /// DroneController
-/// Purpose: Move the drone forward constantly while applying smoothed steering.
+/// Purpose: Move the drone forward at a constant speed and apply smoothed steering from InputController.
 /// Responsibilities:
-/// - Apply constant forward speed.
-/// - Rotate using normalized steering input.
+/// - Apply constant forward movement each frame.
+/// - Consume normalized steering input from InputController.
+/// - Limit turning by max turn rate and smooth orientation changes.
 /// </summary>
 public sealed class DroneController : MonoBehaviour
 {
@@ -14,13 +15,16 @@ public sealed class DroneController : MonoBehaviour
 
     [Header("Movement")]
     [SerializeField, Min(1f)] private float forwardSpeed = 30f;
-    [SerializeField, Min(10f)] private float maxTurnRateDegrees = 120f;
+    [SerializeField, Min(1f)] private float maxTurnRateDegreesPerSecond = 120f;
     [SerializeField, Range(0.01f, 0.5f)] private float steeringSmoothing = 0.1f;
 
-    private bool movementEnabled = true;
-    private Quaternion spawnRotation;
-    private Vector3 spawnPosition;
+    private const float MinDirectionSqrMagnitude = 0.0001f;
+
     private Vector2 smoothedInput;
+    private bool movementEnabled = true;
+
+    private Vector3 spawnPosition;
+    private Quaternion spawnRotation;
 
     private void Awake()
     {
@@ -35,15 +39,9 @@ public sealed class DroneController : MonoBehaviour
             return;
         }
 
-        Vector2 targetInput = inputController != null ? inputController.SteeringInput : Vector2.zero;
-        float interpolation = 1f - Mathf.Exp(-Time.deltaTime / steeringSmoothing);
-        smoothedInput = Vector2.Lerp(smoothedInput, targetInput, interpolation);
-
-        float pitchDelta = -smoothedInput.y * maxTurnRateDegrees * Time.deltaTime;
-        float yawDelta = smoothedInput.x * maxTurnRateDegrees * Time.deltaTime;
-
-        transform.rotation = Quaternion.Euler(transform.eulerAngles + new Vector3(pitchDelta, yawDelta, 0f));
-        transform.position += transform.forward * (forwardSpeed * Time.deltaTime);
+        UpdateSmoothedInput();
+        UpdateRotation();
+        UpdatePosition();
     }
 
     public void SetMovementEnabled(bool enabled)
@@ -55,5 +53,30 @@ public sealed class DroneController : MonoBehaviour
     {
         smoothedInput = Vector2.zero;
         transform.SetPositionAndRotation(spawnPosition, spawnRotation);
+    }
+
+    private void UpdateSmoothedInput()
+    {
+        Vector2 targetInput = inputController != null ? inputController.SteeringInput : Vector2.zero;
+        float interpolation = 1f - Mathf.Exp(-Time.deltaTime / steeringSmoothing);
+        smoothedInput = Vector2.Lerp(smoothedInput, targetInput, interpolation);
+    }
+
+    private void UpdateRotation()
+    {
+        Vector3 steeringDirection = transform.forward + (transform.right * smoothedInput.x) + (transform.up * smoothedInput.y);
+        if (steeringDirection.sqrMagnitude < MinDirectionSqrMagnitude)
+        {
+            return;
+        }
+
+        Quaternion targetRotation = Quaternion.LookRotation(steeringDirection.normalized, transform.up);
+        float maxStep = maxTurnRateDegreesPerSecond * Time.deltaTime;
+        transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, maxStep);
+    }
+
+    private void UpdatePosition()
+    {
+        transform.position += transform.forward * (forwardSpeed * Time.deltaTime);
     }
 }
