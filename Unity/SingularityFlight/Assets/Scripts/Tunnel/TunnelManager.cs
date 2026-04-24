@@ -63,10 +63,7 @@ public sealed class TunnelManager : MonoBehaviour
             tunnelRoot = transform;
         }
 
-        if (nextSpawnDistance <= 0f)
-        {
-            nextSpawnDistance = segmentLength;
-        }
+        nextSpawnDistance = 0f;
     }
 
     private void Start()
@@ -114,9 +111,9 @@ public sealed class TunnelManager : MonoBehaviour
         traveledDistance += stepDistance;
 
         Vector3 forward = droneController.transform.forward;
-        if (forward.sqrMagnitude <= Mathf.Epsilon)
+        if (droneController.TravelDirection.sqrMagnitude > Mathf.Epsilon)
         {
-            forward = Vector3.forward;
+            forward = droneController.TravelDirection;
         }
 
         tunnelRoot.position -= forward.normalized * stepDistance;
@@ -172,7 +169,9 @@ public sealed class TunnelManager : MonoBehaviour
 
     private void PlaceSegment(Transform segment, float startDistance)
     {
-        segment.SetLocalPositionAndRotation(nextSpawnLocalPosition, nextSpawnLocalRotation);
+        Quaternion segmentRotation = nextSpawnLocalRotation;
+        Vector3 segmentCenter = nextSpawnLocalPosition + (segmentRotation * Vector3.forward * (segmentLength * 0.5f));
+        segment.SetLocalPositionAndRotation(segmentCenter, segmentRotation);
         AdvanceCurvedSpawnPose(startDistance + segmentLength);
     }
 

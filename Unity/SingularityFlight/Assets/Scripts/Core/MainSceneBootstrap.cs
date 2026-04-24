@@ -97,16 +97,34 @@ public sealed class MainSceneBootstrap : MonoBehaviour
 
     private static GameObject CreateSegmentPrefab()
     {
-        GameObject segment = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        segment.name = "RuntimeSegmentPrefab";
-        segment.transform.localScale = new Vector3(6f, 6f, 25f);
-        Collider collider = segment.GetComponent<Collider>();
+        const float segmentLength = 25f;
+        const float wallDistance = 3f;
+        const float wallThickness = 0.5f;
+        const float tunnelHeight = 6f;
+        const float tunnelWidth = 6f;
+
+        GameObject segment = new("RuntimeSegmentPrefab");
+        BuildWall("LeftWall", segment.transform, new Vector3(-wallDistance, 0f, 0f), new Vector3(wallThickness, tunnelHeight, segmentLength));
+        BuildWall("RightWall", segment.transform, new Vector3(wallDistance, 0f, 0f), new Vector3(wallThickness, tunnelHeight, segmentLength));
+        BuildWall("TopWall", segment.transform, new Vector3(0f, wallDistance, 0f), new Vector3(tunnelWidth, wallThickness, segmentLength));
+        BuildWall("BottomWall", segment.transform, new Vector3(0f, -wallDistance, 0f), new Vector3(tunnelWidth, wallThickness, segmentLength));
+
+        segment.SetActive(false);
+        return segment;
+    }
+
+    private static void BuildWall(string name, Transform parent, Vector3 localPosition, Vector3 localScale)
+    {
+        GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        wall.name = name;
+        wall.transform.SetParent(parent, false);
+        wall.transform.localPosition = localPosition;
+        wall.transform.localScale = localScale;
+
+        Collider collider = wall.GetComponent<Collider>();
         if (collider != null)
         {
             Object.Destroy(collider);
         }
-
-        segment.SetActive(false);
-        return segment;
     }
 }

@@ -15,18 +15,21 @@ public sealed class DroneController : MonoBehaviour
 
     [Header("Movement")]
     [SerializeField, Min(1f)] private float forwardSpeed = 30f;
+    [SerializeField, Min(0.1f)] private float strafeSpeed = 8f;
+    [SerializeField, Min(0.1f)] private float maxLateralOffset = 2f;
+    [SerializeField, Range(1f, 45f)] private float maxTiltDegrees = 18f;
     [SerializeField, Min(1f)] private float maxTurnRateDegreesPerSecond = 120f;
     [SerializeField, Range(0.01f, 0.5f)] private float steeringSmoothing = 0.1f;
 
-    private const float MinDirectionSqrMagnitude = 0.0001f;
-
     private Vector2 smoothedInput;
     private bool movementEnabled = true;
+    private Vector2 lateralOffset;
 
     private Vector3 spawnPosition;
     private Quaternion spawnRotation;
 
     public float ForwardSpeed => forwardSpeed;
+    public Vector3 TravelDirection => spawnRotation * Vector3.forward;
 
     private void Awake()
     {
@@ -42,8 +45,8 @@ public sealed class DroneController : MonoBehaviour
         }
 
         UpdateSmoothedInput();
+        UpdatePosition();
         UpdateRotation();
-        KeepNearOrigin();
     }
 
 
@@ -60,6 +63,7 @@ public sealed class DroneController : MonoBehaviour
     public void ResetTransform()
     {
         smoothedInput = Vector2.zero;
+        lateralOffset = Vector2.zero;
         transform.SetPositionAndRotation(spawnPosition, spawnRotation);
     }
 
@@ -70,21 +74,19 @@ public sealed class DroneController : MonoBehaviour
         smoothedInput = Vector2.Lerp(smoothedInput, targetInput, interpolation);
     }
 
-    private void UpdateRotation()
+    private void UpdatePosition()
     {
-        Vector3 steeringDirection = transform.forward + (transform.right * smoothedInput.x) + (transform.up * smoothedInput.y);
-        if (steeringDirection.sqrMagnitude < MinDirectionSqrMagnitude)
-        {
-            return;
-        }
+        lateralOffset += smoothedInput * (strafeSpeed * Time.deltaTime);
+        lateralOffset = Vector2.ClampMagnitude(lateralOffset, maxLateralOffset);
 
-        Quaternion targetRotation = Quaternion.LookRotation(steeringDirection.normalized, Vector3.up);
-        float maxStep = maxTurnRateDegreesPerSecond * Time.deltaTime;
-        transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, maxStep);
+        Vector3 worldOffset = (spawnRotation * Vector3.right * lateralOffset.x) + (spawnRotation * Vector3.up * lateralOffset.y);
+        transform.position = spawnPosition + worldOffset;
     }
 
-    private void KeepNearOrigin()
+    private void UpdateRotation()
     {
-        transform.position = spawnPosition;
+        Quaternion targetRotation = spawnRotation * Quaternion.Euler(-smoothedInput.y * maxTiltDegrees, smoothedInput.x * maxTiltDegrees, -smoothedInput.x * maxTiltDegrees * 0.5f);
+        float maxStep = maxTurnRateDegreesPerSecond * Time.deltaTime;
+        transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, maxStep);
     }
 }

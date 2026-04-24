@@ -17,6 +17,7 @@ public sealed class InputController : MonoBehaviour
     private Vector2 pointerPosition;
     private Vector2 smoothedInput;
     private bool pointerActive;
+    private bool pointerOwnedByTouch;
 
     public Vector2 SteeringInput => smoothedInput;
 
@@ -44,7 +45,7 @@ public sealed class InputController : MonoBehaviour
             return NormalizeDrag(mouseDrag);
         }
 
-        return Vector2.zero;
+        return ReadKeyboardInput();
     }
 
     private bool TryGetTouchDrag(out Vector2 dragDelta)
@@ -53,7 +54,11 @@ public sealed class InputController : MonoBehaviour
 
         if (Input.touchCount <= 0)
         {
-            pointerActive = false;
+            if (pointerOwnedByTouch)
+            {
+                pointerOwnedByTouch = false;
+                pointerActive = false;
+            }
             return false;
         }
 
@@ -62,12 +67,14 @@ public sealed class InputController : MonoBehaviour
         {
             pointerPosition = touch.position;
             pointerActive = true;
+            pointerOwnedByTouch = true;
             return false;
         }
 
         if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled)
         {
             pointerActive = false;
+            pointerOwnedByTouch = false;
             return false;
         }
 
@@ -75,6 +82,7 @@ public sealed class InputController : MonoBehaviour
         {
             pointerPosition = touch.position;
             pointerActive = true;
+            pointerOwnedByTouch = true;
             return false;
         }
 
@@ -91,12 +99,16 @@ public sealed class InputController : MonoBehaviour
         {
             pointerPosition = Input.mousePosition;
             pointerActive = true;
+            pointerOwnedByTouch = false;
             return false;
         }
 
         if (Input.GetMouseButtonUp(0))
         {
-            pointerActive = false;
+            if (!pointerOwnedByTouch)
+            {
+                pointerActive = false;
+            }
             return false;
         }
 
@@ -117,5 +129,12 @@ public sealed class InputController : MonoBehaviour
         normalized.x = Mathf.Clamp(normalized.x, -1f, 1f);
         normalized.y = Mathf.Clamp(normalized.y, -1f, 1f);
         return normalized;
+    }
+
+    private static Vector2 ReadKeyboardInput()
+    {
+        float horizontal = Input.GetAxisRaw("Horizontal");
+        float vertical = Input.GetAxisRaw("Vertical");
+        return new Vector2(horizontal, vertical).normalized;
     }
 }
