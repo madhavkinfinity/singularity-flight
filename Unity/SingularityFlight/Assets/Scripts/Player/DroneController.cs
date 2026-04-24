@@ -24,11 +24,13 @@ public sealed class DroneController : MonoBehaviour
     private Vector2 smoothedInput;
     private bool movementEnabled = true;
     private Vector2 lateralOffset;
+    private float traveledDistance;
 
     private Vector3 spawnPosition;
     private Quaternion spawnRotation;
 
     public float ForwardSpeed => forwardSpeed;
+    public float TraveledDistance => traveledDistance;
     public Vector3 TravelDirection => spawnRotation * Vector3.forward;
 
     private void Awake()
@@ -64,6 +66,7 @@ public sealed class DroneController : MonoBehaviour
     {
         smoothedInput = Vector2.zero;
         lateralOffset = Vector2.zero;
+        traveledDistance = 0f;
         transform.SetPositionAndRotation(spawnPosition, spawnRotation);
     }
 
@@ -76,11 +79,13 @@ public sealed class DroneController : MonoBehaviour
 
     private void UpdatePosition()
     {
+        traveledDistance += forwardSpeed * Time.deltaTime;
         lateralOffset += smoothedInput * (strafeSpeed * Time.deltaTime);
         lateralOffset = Vector2.ClampMagnitude(lateralOffset, maxLateralOffset);
 
         Vector3 worldOffset = (spawnRotation * Vector3.right * lateralOffset.x) + (spawnRotation * Vector3.up * lateralOffset.y);
-        transform.position = spawnPosition + worldOffset;
+        Vector3 forwardOffset = spawnRotation * Vector3.forward * traveledDistance;
+        transform.position = spawnPosition + forwardOffset + worldOffset;
     }
 
     private void UpdateRotation()
