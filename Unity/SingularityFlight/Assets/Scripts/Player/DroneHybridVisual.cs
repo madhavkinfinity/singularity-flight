@@ -86,6 +86,7 @@ public sealed class DroneHybridVisual : MonoBehaviour
         BuildBody(visualRoot);
         BuildPods(visualRoot);
         BuildCanopy(visualRoot);
+        BuildDetailing(visualRoot);
         BuildTrail(visualRoot);
     }
 
@@ -141,6 +142,33 @@ public sealed class DroneHybridVisual : MonoBehaviour
         return engineRenderer;
     }
 
+
+    private void BuildDetailing(Transform parent)
+    {
+        BuildWing("LeftWing", parent, -1f);
+        BuildWing("RightWing", parent, 1f);
+
+        GameObject spine = CreatePrimitive("Spine", PrimitiveType.Cube, parent, new Vector3(0f, bodyHeight * 0.28f, -bodyLength * 0.05f), Vector3.zero, new Vector3(bodyWidth * 0.18f, bodyHeight * 0.28f, bodyLength * 0.95f));
+        ApplyMaterial(spine.GetComponent<Renderer>(), accentColor, 0.45f);
+
+        GameObject noseEmitter = CreatePrimitive("NoseEmitter", PrimitiveType.Sphere, parent, new Vector3(0f, bodyHeight * 0.02f, bodyLength * 0.56f), Vector3.zero, new Vector3(bodyWidth * 0.2f, bodyHeight * 0.2f, bodyWidth * 0.2f));
+        ApplyMaterial(noseEmitter.GetComponent<Renderer>(), accentColor, 1.5f);
+
+        GameObject stabilizer = CreatePrimitive("RearStabilizer", PrimitiveType.Cube, parent, new Vector3(0f, bodyHeight * 0.36f, -bodyLength * 0.46f), Vector3.zero, new Vector3(bodyWidth * 0.3f, bodyHeight * 0.2f, bodyLength * 0.25f));
+        ApplyMaterial(stabilizer.GetComponent<Renderer>(), hullColor, 0f);
+    }
+
+    private void BuildWing(string wingName, Transform parent, float sideSign)
+    {
+        GameObject wing = CreateChild(wingName, new Vector3(sideSign * (podOffset * 0.68f), -bodyHeight * 0.08f, bodyLength * 0.04f), new Vector3(0f, 0f, sideSign * 10f), Vector3.one);
+        wing.transform.SetParent(parent, false);
+
+        GameObject strut = CreatePrimitive("Strut", PrimitiveType.Cube, wing.transform, new Vector3(0f, 0f, 0f), Vector3.zero, new Vector3(bodyWidth * 0.08f, bodyHeight * 0.2f, bodyLength * 1.05f));
+        ApplyMaterial(strut.GetComponent<Renderer>(), hullColor, 0f);
+
+        GameObject fin = CreatePrimitive("Fin", PrimitiveType.Cube, wing.transform, new Vector3(sideSign * bodyWidth * 0.08f, bodyHeight * 0.08f, bodyLength * 0.16f), new Vector3(20f, 0f, sideSign * 18f), new Vector3(bodyWidth * 0.12f, bodyHeight * 0.14f, bodyLength * 0.4f));
+        ApplyMaterial(fin.GetComponent<Renderer>(), accentColor, 0.6f);
+    }
     private void BuildCanopy(Transform parent)
     {
         GameObject canopy = CreatePrimitive("Canopy", PrimitiveType.Sphere, parent, new Vector3(0f, bodyHeight * 0.28f, bodyLength * 0.18f), Vector3.zero, new Vector3(bodyWidth * 0.65f, bodyHeight * 0.65f, bodyLength * 0.25f));

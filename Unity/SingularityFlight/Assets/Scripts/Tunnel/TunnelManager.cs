@@ -8,7 +8,7 @@ using UnityEngine;
 /// - Keep an active segment window of 20-25 pieces.
 /// - Spawn/reposition segments ahead of the player.
 /// - Despawn/recycle segments behind the player.
-/// - Apply deterministic, noise-based curvature for smooth tunnel turns.
+/// - Apply deterministic, noise-driven twist and turning offsets.
 /// </summary>
 public sealed class TunnelManager : MonoBehaviour
 {
@@ -21,10 +21,12 @@ public sealed class TunnelManager : MonoBehaviour
     [SerializeField, Min(0f)] private float despawnBuffer = 5f;
 
     [Header("Curvature")]
-    [SerializeField, Range(0f, 10f)] private float yawStepDegrees = 0f;
-    [SerializeField, Range(0f, 8f)] private float pitchStepDegrees = 0f;
-    [SerializeField, Min(0.001f)] private float curvatureNoiseFrequency = 0.04f;
-    [SerializeField, Range(0.05f, 1f)] private float turnSmoothing = 0.25f;
+    [SerializeField, Range(0f, 10f)] private float yawStepDegrees = 2.8f;
+    [SerializeField, Range(0f, 8f)] private float pitchStepDegrees = 2f;
+    [SerializeField, Range(0f, 18f)] private float rollStepDegrees = 9f;
+    [SerializeField, Min(0.001f)] private float curvatureNoiseFrequency = 0.035f;
+    [SerializeField, Min(0.001f)] private float rollNoiseFrequency = 0.05f;
+    [SerializeField, Range(0f, 2f)] private float turnSwayAmplitude = 1.15f;
 
     [Header("References")]
     [SerializeField] private Transform tunnelRoot;
@@ -38,12 +40,11 @@ public sealed class TunnelManager : MonoBehaviour
     private float nextSpawnDistance;
     private int createdSegmentCount;
 
-    private Vector3 nextSpawnLocalPosition;
-    private Quaternion nextSpawnLocalRotation = Quaternion.identity;
-    private float currentYawStep;
-    private float currentPitchStep;
     private float yawNoiseOffset;
     private float pitchNoiseOffset;
+    private float rollNoiseOffset;
+    private float swayXNoiseOffset;
+    private float swayYNoiseOffset;
 
     public int ActiveSegments => activeSegmentCount;
     public float SegmentLength => segmentLength;
@@ -57,6 +58,9 @@ public sealed class TunnelManager : MonoBehaviour
 
         yawNoiseOffset = seededRandom.NextFloat(-1000f, 1000f);
         pitchNoiseOffset = seededRandom.NextFloat(-1000f, 1000f);
+        rollNoiseOffset = seededRandom.NextFloat(-1000f, 1000f);
+        swayXNoiseOffset = seededRandom.NextFloat(-1000f, 1000f);
+        swayYNoiseOffset = seededRandom.NextFloat(-1000f, 1000f);
 
         if (tunnelRoot == null)
         {
@@ -155,26 +159,32 @@ public sealed class TunnelManager : MonoBehaviour
 
     private void PlaceSegment(Transform segment, float startDistance)
     {
-        Quaternion segmentRotation = nextSpawnLocalRotation;
-        Vector3 segmentCenter = nextSpawnLocalPosition + (segmentRotation * Vector3.forward * (segmentLength * 0.5f));
-        segment.SetLocalPositionAndRotation(segmentCenter, segmentRotation);
-        AdvanceCurvedSpawnPose(startDistance + segmentLength);
+        float centerDistance = startDistance + (segmentLength * 0.5f);
+
+        Vector3 centerPosition = CalculateTurnOffset(centerDistance);
+        Quaternion rotation = CalculateTwistRotation(centerDistance);
+
+        segment.SetLocalPositionAndRotation(centerPosition + (Vector3.forward * centerDistance), rotation);
     }
 
-    private void AdvanceCurvedSpawnPose(float distanceSample)
+    private Quaternion CalculateTwistRotation(float distance)
     {
-        float sample = distanceSample * curvatureNoiseFrequency;
+        float curvatureSample = distance * curvatureNoiseFrequency;
+        float rollSample = distance * rollNoiseFrequency;
 
-        float targetYawStep = (Mathf.PerlinNoise(yawNoiseOffset, sample) * 2f - 1f) * yawStepDegrees;
-        float targetPitchStep = (Mathf.PerlinNoise(pitchNoiseOffset, sample) * 2f - 1f) * pitchStepDegrees;
+        float yaw = (Mathf.PerlinNoise(yawNoiseOffset, curvatureSample) * 2f - 1f) * yawStepDegrees;
+        float pitch = (Mathf.PerlinNoise(pitchNoiseOffset, curvatureSample) * 2f - 1f) * pitchStepDegrees;
+        float roll = (Mathf.PerlinNoise(rollNoiseOffset, rollSample) * 2f - 1f) * rollStepDegrees;
 
-        float smoothFactor = 1f - Mathf.Exp(-turnSmoothing);
-        currentYawStep = Mathf.Lerp(currentYawStep, targetYawStep, smoothFactor);
-        currentPitchStep = Mathf.Lerp(currentPitchStep, targetPitchStep, smoothFactor);
+        return Quaternion.Euler(pitch, yaw, roll);
+    }
 
-        Quaternion incrementalTurn = Quaternion.Euler(currentPitchStep, currentYawStep, 0f);
-        nextSpawnLocalRotation = incrementalTurn * nextSpawnLocalRotation;
-        nextSpawnLocalPosition += nextSpawnLocalRotation * (Vector3.forward * segmentLength);
+    private Vector3 CalculateTurnOffset(float distance)
+    {
+        float sample = distance * curvatureNoiseFrequency;
+        float swayX = (Mathf.PerlinNoise(swayXNoiseOffset, sample) * 2f - 1f) * turnSwayAmplitude;
+        float swayY = (Mathf.PerlinNoise(swayYNoiseOffset, sample) * 2f - 1f) * turnSwayAmplitude;
+        return new Vector3(swayX, swayY, 0f);
     }
 
     private readonly struct SegmentHandle

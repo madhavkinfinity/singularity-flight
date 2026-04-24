@@ -26,10 +26,10 @@ public sealed class CameraFollow : MonoBehaviour
 
     public void ApplyThirdPersonPreset()
     {
-        followOffset = new Vector3(0f, 2.4f, -7.5f);
-        lookAheadDistance = 7f;
-        lookAtHeight = 0.55f;
-        positionSmoothTime = 0.12f;
+        followOffset = new Vector3(0f, 0.85f, -3.6f);
+        lookAheadDistance = 8.5f;
+        lookAtHeight = 0.3f;
+        positionSmoothTime = 0.08f;
         rotationLerpSpeed = 10f;
 
         SnapToFollowPose();
