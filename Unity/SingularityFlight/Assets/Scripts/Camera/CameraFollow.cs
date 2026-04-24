@@ -19,14 +19,16 @@ public sealed class CameraFollow : MonoBehaviour
 
     [Header("Look")]
     [SerializeField, Min(0f)] private float lookAheadDistance = 6f;
+    [SerializeField, Min(0f)] private float lookAtHeight = 0.45f;
     [SerializeField, Min(1f)] private float rotationLerpSpeed = 8f;
 
     private Vector3 followVelocity;
 
     public void ApplyThirdPersonPreset()
     {
-        followOffset = new Vector3(0f, 2.2f, -9f);
-        lookAheadDistance = 12f;
+        followOffset = new Vector3(0f, 2.4f, -7.5f);
+        lookAheadDistance = 7f;
+        lookAtHeight = 0.55f;
         positionSmoothTime = 0.12f;
         rotationLerpSpeed = 10f;
 
@@ -59,7 +61,7 @@ public sealed class CameraFollow : MonoBehaviour
             positionSmoothTime);
 
         Vector3 lookDirectionBasis = droneController != null ? droneController.TravelDirection : target.forward;
-        Vector3 lookPoint = target.position + (lookDirectionBasis * lookAheadDistance);
+        Vector3 lookPoint = target.position + (Vector3.up * lookAtHeight) + (lookDirectionBasis * lookAheadDistance);
         Vector3 lookDirection = lookPoint - transform.position;
         if (lookDirection.sqrMagnitude <= Mathf.Epsilon)
         {
@@ -85,7 +87,7 @@ public sealed class CameraFollow : MonoBehaviour
             + (frameRotation * Vector3.forward * followOffset.z);
 
         Vector3 lookDirectionBasis = droneController != null ? droneController.TravelDirection : target.forward;
-        Vector3 lookDirection = (target.position + (lookDirectionBasis * lookAheadDistance)) - transform.position;
+        Vector3 lookDirection = (target.position + (Vector3.up * lookAtHeight) + (lookDirectionBasis * lookAheadDistance)) - transform.position;
         if (lookDirection.sqrMagnitude > Mathf.Epsilon)
         {
             transform.rotation = Quaternion.LookRotation(lookDirection.normalized, Vector3.up);
