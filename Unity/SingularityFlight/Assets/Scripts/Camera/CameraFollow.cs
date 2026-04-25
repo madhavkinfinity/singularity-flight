@@ -14,7 +14,7 @@ public sealed class CameraFollow : MonoBehaviour
     private DroneController droneController;
 
     [Header("Follow")]
-    [SerializeField] private Vector3 followOffset = new(0f, 1.5f, -7f);
+    [SerializeField] private Vector3 followOffset = new(0f, 1.7f, -6.1f);
     [SerializeField, Min(0.01f)] private float positionSmoothTime = 0.18f;
 
     [Header("Look")]
@@ -26,9 +26,9 @@ public sealed class CameraFollow : MonoBehaviour
 
     public void ApplyThirdPersonPreset()
     {
-        followOffset = new Vector3(0f, 0.85f, -3.6f);
+        followOffset = new Vector3(0f, 1.0f, -3.15f);
         lookAheadDistance = 8.5f;
-        lookAtHeight = 0.3f;
+        lookAtHeight = 0.4f;
         positionSmoothTime = 0.08f;
         rotationLerpSpeed = 10f;
 

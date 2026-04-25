@@ -23,6 +23,8 @@ public sealed class ObstacleSystem : MonoBehaviour
     [SerializeField, Min(0f)] private float laneJitter = 0.28f;
     [SerializeField, Min(0.2f)] private float minScale = 0.65f;
     [SerializeField, Min(0.2f)] private float maxScale = 1.35f;
+    [SerializeField, Min(0.25f)] private float easyPhaseDistance = 700f;
+    [SerializeField, Min(0.25f)] private float mediumPhaseDistance = 1700f;
 
     [Header("Pool")]
     [SerializeField, Min(6)] private int poolSize = 24;
@@ -59,6 +61,7 @@ public sealed class ObstacleSystem : MonoBehaviour
     private readonly Queue<ObstacleBase> pooledObstacles = new();
     private readonly List<ObstacleBase> activeObstacles = new();
     private readonly MaterialPropertyBlock materialPropertyBlock = new();
+    private readonly List<int> laneBuffer = new(LaneOffsets.Length);
 
     private SeedGenerator.DeterministicRandom seededRandom;
     private float spawnTimer;
@@ -139,20 +142,18 @@ public sealed class ObstacleSystem : MonoBehaviour
             return;
         }
 
-        float difficulty = Mathf.Clamp01(tunnelManager.TraveledDistance / maxDifficultyDistance);
-        int maxCount = difficulty < 0.33f ? 1 : (difficulty < 0.75f ? 2 : 3);
-        int spawnCount = seededRandom.NextInt(1, maxCount + 1);
+        float distance = tunnelManager.TraveledDistance;
+        float difficulty = Mathf.Clamp01(distance / maxDifficultyDistance);
+        int safeLaneCount = GetSafeLaneCount(distance);
+        int maxCount = Mathf.Clamp(LaneOffsets.Length - safeLaneCount, 1, 4);
+        int minCount = distance < easyPhaseDistance ? 1 : (distance < mediumPhaseDistance ? 2 : 2);
+        int spawnCount = seededRandom.NextInt(minCount, maxCount + 1);
 
-        int safeLaneIndex = seededRandom.NextInt(0, LaneOffsets.Length);
-        HashSet<int> usedLanes = new() { safeLaneIndex };
+        HashSet<int> usedLanes = ReserveSafeLanes(safeLaneCount);
+        bool applyJitter = difficulty >= 0.35f;
 
         for (int i = 0; i < spawnCount; i++)
         {
-            if (pooledObstacles.Count == 0)
-            {
-                return;
-            }
-
             int laneIndex = ChooseLane(usedLanes);
             if (laneIndex < 0)
             {
@@ -160,8 +161,42 @@ public sealed class ObstacleSystem : MonoBehaviour
             }
 
             usedLanes.Add(laneIndex);
-            SpawnSingleObstacle(LaneOffsets[laneIndex]);
+            SpawnSingleObstacle(LaneOffsets[laneIndex], applyJitter, difficulty);
         }
+    }
+
+    private int GetSafeLaneCount(float distance)
+    {
+        if (distance < easyPhaseDistance)
+        {
+            return 3;
+        }
+
+        if (distance < mediumPhaseDistance)
+        {
+            return 2;
+        }
+
+        return 1;
+    }
+
+    private HashSet<int> ReserveSafeLanes(int safeLaneCount)
+    {
+        HashSet<int> usedLanes = new();
+        laneBuffer.Clear();
+        for (int i = 0; i < LaneOffsets.Length; i++)
+        {
+            laneBuffer.Add(i);
+        }
+
+        for (int i = 0; i < safeLaneCount && laneBuffer.Count > 0; i++)
+        {
+            int index = seededRandom.NextInt(0, laneBuffer.Count);
+            usedLanes.Add(laneBuffer[index]);
+            laneBuffer.RemoveAt(index);
+        }
+
+        return usedLanes;
     }
 
     private int ChooseLane(HashSet<int> usedLanes)
@@ -184,15 +219,20 @@ public sealed class ObstacleSystem : MonoBehaviour
         return availableLanes[chosen];
     }
 
-    private void SpawnSingleObstacle(Vector2 laneOffset)
+    private void SpawnSingleObstacle(Vector2 laneOffset, bool applyJitter, float difficulty)
     {
-        ObstacleBase obstacle = pooledObstacles.Dequeue();
+        ObstacleBase obstacle = GetPooledObstacle();
+        if (obstacle == null)
+        {
+            return;
+        }
 
         Vector3 forward = droneController.TravelDirection.normalized;
         Vector3 spawnPosition = droneController.transform.position + (forward * spawnDistanceAhead);
 
-        float jitterX = seededRandom.NextFloat(-laneJitter, laneJitter);
-        float jitterY = seededRandom.NextFloat(-laneJitter, laneJitter);
+        float jitterStrength = applyJitter ? Mathf.Lerp(0f, laneJitter, difficulty) : 0f;
+        float jitterX = seededRandom.NextFloat(-jitterStrength, jitterStrength);
+        float jitterY = seededRandom.NextFloat(-jitterStrength, jitterStrength);
         Vector3 lateralOffset = droneController.TravelRight * ((laneOffset.x * laneRadius) + jitterX);
         Vector3 verticalOffset = droneController.TravelUp * ((laneOffset.y * laneRadius) + jitterY);
         spawnPosition += lateralOffset + verticalOffset;
@@ -209,9 +249,28 @@ public sealed class ObstacleSystem : MonoBehaviour
         activeObstacles.Add(obstacle);
     }
 
+    private ObstacleBase GetPooledObstacle()
+    {
+        while (pooledObstacles.Count > 0)
+        {
+            ObstacleBase obstacle = pooledObstacles.Dequeue();
+            if (obstacle != null)
+            {
+                return obstacle;
+            }
+        }
+
+        return null;
+    }
+
     private void TintObstacle(ObstacleBase obstacle)
     {
-        Renderer renderer = obstacle.GetComponent<Renderer>();
+        if (obstacle == null || obstacleColors == null || obstacleColors.Length == 0)
+        {
+            return;
+        }
+
+        Renderer renderer = obstacle.GetComponentInChildren<Renderer>();
         if (renderer == null || obstacleColors == null || obstacleColors.Length == 0)
         {
             return;
