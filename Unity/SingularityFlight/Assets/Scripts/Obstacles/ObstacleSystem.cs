@@ -60,7 +60,7 @@ public sealed class ObstacleSystem : MonoBehaviour
 
     private readonly Queue<ObstacleBase> pooledObstacles = new();
     private readonly List<ObstacleBase> activeObstacles = new();
-    private readonly MaterialPropertyBlock materialPropertyBlock = new();
+    private MaterialPropertyBlock materialPropertyBlock;
     private List<int> laneBuffer;
 
     private SeedGenerator.DeterministicRandom seededRandom;
@@ -70,6 +70,7 @@ public sealed class ObstacleSystem : MonoBehaviour
     {
         seededRandom = SeedGenerator.CreateDeterministicRandom(SeedGenerator.GetDailySeedUtc());
         laneBuffer ??= new List<int>(LaneOffsets.Length);
+        materialPropertyBlock ??= new MaterialPropertyBlock();
 
         if (obstacleRoot == null)
         {
@@ -283,6 +284,12 @@ public sealed class ObstacleSystem : MonoBehaviour
             return;
         }
 
+        if (seededRandom == null)
+        {
+            seededRandom = SeedGenerator.CreateDeterministicRandom(SeedGenerator.GetDailySeedUtc());
+        }
+
+        materialPropertyBlock ??= new MaterialPropertyBlock();
         Color color = obstacleColors[seededRandom.NextInt(0, obstacleColors.Length)];
         materialPropertyBlock.Clear();
         materialPropertyBlock.SetColor("_BaseColor", color);
