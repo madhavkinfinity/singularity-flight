@@ -61,7 +61,7 @@ public sealed class ObstacleSystem : MonoBehaviour
     private readonly Queue<ObstacleBase> pooledObstacles = new();
     private readonly List<ObstacleBase> activeObstacles = new();
     private readonly MaterialPropertyBlock materialPropertyBlock = new();
-    private readonly List<int> laneBuffer = new(LaneOffsets.Length);
+    private List<int> laneBuffer;
 
     private SeedGenerator.DeterministicRandom seededRandom;
     private float spawnTimer;
@@ -69,6 +69,7 @@ public sealed class ObstacleSystem : MonoBehaviour
     private void Awake()
     {
         seededRandom = SeedGenerator.CreateDeterministicRandom(SeedGenerator.GetDailySeedUtc());
+        laneBuffer ??= new List<int>(LaneOffsets.Length);
 
         if (obstacleRoot == null)
         {
@@ -142,6 +143,11 @@ public sealed class ObstacleSystem : MonoBehaviour
             return;
         }
 
+        if (seededRandom == null)
+        {
+            seededRandom = SeedGenerator.CreateDeterministicRandom(SeedGenerator.GetDailySeedUtc());
+        }
+
         float distance = tunnelManager.TraveledDistance;
         float difficulty = Mathf.Clamp01(distance / maxDifficultyDistance);
         int safeLaneCount = GetSafeLaneCount(distance);
@@ -183,6 +189,7 @@ public sealed class ObstacleSystem : MonoBehaviour
     private HashSet<int> ReserveSafeLanes(int safeLaneCount)
     {
         HashSet<int> usedLanes = new();
+        laneBuffer ??= new List<int>(LaneOffsets.Length);
         laneBuffer.Clear();
         for (int i = 0; i < LaneOffsets.Length; i++)
         {
