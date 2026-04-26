@@ -13,7 +13,6 @@ public sealed class MainSceneBootstrap : MonoBehaviour
 {
     private const string MainSceneName = "Main";
 
-
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void EnsureBootstrapObject()
     {
@@ -74,7 +73,7 @@ public sealed class MainSceneBootstrap : MonoBehaviour
             tunnelManager = tunnelRoot.AddComponent<TunnelManager>();
         }
 
-        GameObject segmentPrefab = CreateSegmentPrefab();
+        GameObject segmentPrefab = RuntimeTunnelSegmentFactory.CreateSegmentPrefab();
         tunnelManager.InitializeForRuntime(tunnelManager.transform, droneController, new[] { segmentPrefab });
 
         ObstacleSystem obstacleSystem = FindAnyObjectByType<ObstacleSystem>();
@@ -113,39 +112,6 @@ public sealed class MainSceneBootstrap : MonoBehaviour
         return droneController;
     }
 
-    private static GameObject CreateSegmentPrefab()
-    {
-        const float segmentLength = 25f;
-        const float wallDistance = 5f;
-        const float wallThickness = 0.5f;
-        const float tunnelHeight = 10f;
-        const float tunnelWidth = 10f;
-
-        GameObject segment = new("RuntimeSegmentPrefab");
-        BuildWall("LeftWall", segment.transform, new Vector3(-wallDistance, 0f, 0f), new Vector3(wallThickness, tunnelHeight, segmentLength));
-        BuildWall("RightWall", segment.transform, new Vector3(wallDistance, 0f, 0f), new Vector3(wallThickness, tunnelHeight, segmentLength));
-        BuildWall("TopWall", segment.transform, new Vector3(0f, wallDistance, 0f), new Vector3(tunnelWidth, wallThickness, segmentLength));
-        BuildWall("BottomWall", segment.transform, new Vector3(0f, -wallDistance, 0f), new Vector3(tunnelWidth, wallThickness, segmentLength));
-
-        segment.SetActive(false);
-        return segment;
-    }
-
-    private static void BuildWall(string name, Transform parent, Vector3 localPosition, Vector3 localScale)
-    {
-        GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        wall.name = name;
-        wall.transform.SetParent(parent, false);
-        wall.transform.localPosition = localPosition;
-        wall.transform.localScale = localScale;
-
-        Collider collider = wall.GetComponent<Collider>();
-        if (collider is BoxCollider boxCollider)
-        {
-            boxCollider.isTrigger = false;
-        }
-    }
-
     private static ObstacleBase[] CreateObstaclePrefabs()
     {
         ObstacleBase[] prefabs =
@@ -179,5 +145,4 @@ public sealed class MainSceneBootstrap : MonoBehaviour
         obstacle.SetActive(false);
         return shapeObstacle;
     }
-
 }
